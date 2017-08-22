@@ -439,8 +439,10 @@ int main(int argc, char **argv)
 
             if(autoReset && stationary && (imu_msg.header.stamp - lastResetTime) > resetDur)
             {
-              ROS_INFO("Stationary detection - zeroing and resetting...");
-              resetImu(&sensor, true, true, true); // TODO
+              ROS_INFO("Stationary detection - resetting...");
+	      // NOTE Gyro zeroing takes about 3 seconds, so we don't want to do 
+              // it without guarantees the IMU will not start moving
+              resetImu(&sensor, false, true, false); // TODO
               
               if(autoCalib) // TODO Put calibration in its own check since it needs # samples
               {

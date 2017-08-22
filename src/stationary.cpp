@@ -1,6 +1,8 @@
 #include "um7/stationary.h"
 #include "um7/firmware_registers.h"
 
+#include <ros/ros.h>
+
 namespace um7
 {
 
@@ -26,7 +28,11 @@ bool StationaryDetector::Test(const sensor_msgs::Imu& msg)
 
 	if(xlErr < _xlMagTol && gyroErr < _gyroMagTol)
 	{
-		_bufferedPositives++;
+	  _bufferedPositives++;
+	}
+        else
+	{
+	        _bufferedPositives = 0;
 	}
 	
 	return _bufferedPositives >= _minNumSamples;
