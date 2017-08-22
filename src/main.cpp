@@ -254,10 +254,10 @@ void publishMsgs(um7::Registers& r, ros::NodeHandle* imu_nh, um7::Calibration& c
     imu_msg.linear_acceleration.y = r.accel.get_scaled(1);
     imu_msg.linear_acceleration.z = r.accel.get_scaled(2);
   }
+  calib.Correct(imu_msg);
 
   if (imu_pub.getNumSubscribers() > 0)
   {
-	  calib.Correct(imu_msg);
     imu_pub.publish(imu_msg);
   }
 
