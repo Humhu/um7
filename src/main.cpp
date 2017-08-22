@@ -44,6 +44,7 @@
 #include "um7/registers.h"
 #include "um7/Reset.h"
 #include "um7/stationary.h"
+#include "um7/calibration.h"
 
 const char VERSION[10] = "0.0.2";   // um7_driver version
 
@@ -210,7 +211,7 @@ bool handleResetService(um7::Comms* sensor,
  * Uses the register accessors to grab data from the IMU, and populate
  * the ROS messages which are output.
  */
-void publishMsgs(um7::Registers& r, ros::NodeHandle* imu_nh, sensor_msgs::Imu& imu_msg, bool tf_ned_to_enu)
+void publishMsgs(um7::Registers& r, ros::NodeHandle* imu_nh, um7::Calibration& calib, sensor_msgs::Imu& imu_msg, bool tf_ned_to_enu)
 {
   static ros::Publisher imu_pub = imu_nh->advertise<sensor_msgs::Imu>("data", 1, false);
   static ros::Publisher mag_pub = imu_nh->advertise<geometry_msgs::Vector3Stamped>("mag", 1, false);
@@ -255,6 +256,7 @@ void publishMsgs(um7::Registers& r, ros::NodeHandle* imu_nh, sensor_msgs::Imu& i
       imu_msg.linear_acceleration.z = r.accel.get_scaled(2);
     }
 
+	calib.Correct(imu_msg);
     imu_pub.publish(imu_msg);
   }
 
@@ -382,6 +384,11 @@ int main(int argc, char **argv)
   
   um7::StationaryDetector statDet(xlTol, gyroTol, (unsigned int) minSamples);
 
+  // Read intrinsics calibration
+  double xlScale;
+  private_nh.param<double>("xl_scale", xlScale, 1.0);
+  um7::Calibration calib(xlScale);
+
   // Real Time Loop
   bool first_failure = true;
   while (ros::ok())
@@ -413,7 +420,7 @@ int main(int argc, char **argv)
           {
             // Triggered by arrival of final message in group.
             imu_msg.header.stamp = ros::Time::now();
-            publishMsgs(registers, &imu_nh, imu_msg, tf_ned_to_enu);
+            publishMsgs(registers, &imu_nh, calib, imu_msg, tf_ned_to_enu);
             ros::spinOnce();
 
 			if(autoReset && statDet.Test(imu_msg))

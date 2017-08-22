@@ -3,8 +3,6 @@
 
 #include "sensor_msgs/Imu.h"
 
-#include <deque>
-
 namespace um7
 {
 
