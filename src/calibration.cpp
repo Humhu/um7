@@ -43,7 +43,7 @@ void Calibration::UpdateCalibration()
 	{
 		acc += compute_xl_mag(_stationarySamples[i]);
 	}
-	_xlScale = GRAVITY * _stationarySamples.size() / acc;
+	_xlScale *= GRAVITY * _stationarySamples.size() / acc;
 	ROS_INFO("Updated xl scale to %f", _xlScale);
 	_stationarySamples.clear();
 }
