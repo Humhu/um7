@@ -1,6 +1,5 @@
 #include "um7/stationary.h"
-
-#define GRAVITY (9.81)
+#include "um7/firmware_registers.h"
 
 namespace um7
 {

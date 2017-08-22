@@ -378,6 +378,10 @@ int main(int argc, char **argv)
   bool autoReset;
   double xlTol, gyroTol;
   int minSamples;
+  ros::Time lastResetTime = ros::Time::now();
+  double rd;
+  private_nh.param<double>("stationary_reset_period", rd, 5.0);
+  ros::Duration resetDur(rd);
   private_nh.param<bool>("enable_stationary_reset", autoReset, false);
   private_nh.param<double>("stationary_xl_tol", xlTol, 0.1);
   private_nh.param<double>("stationary_gyro_tol", gyroTol, 0.01);
@@ -387,8 +391,11 @@ int main(int argc, char **argv)
 
   // Read intrinsics calibration
   double xlScale;
+  bool autoCalib;
   private_nh.param<double>("xl_scale", xlScale, 1.0);
-  um7::Calibration calib(xlScale);
+  private_nh.param<int>("calib_min_samples", minSamples, 20);
+  private_nh.param<bool>("auto_calibrate_xl", autoCalib, true);
+  um7::Calibration calib(xlScale, minSamples);
 
   // Real Time Loop
   bool first_failure = true;
@@ -424,12 +431,24 @@ int main(int argc, char **argv)
             publishMsgs(registers, &imu_nh, calib, imu_msg, tf_ned_to_enu);
             ros::spinOnce();
 
-			if(autoReset && statDet.Test(imu_msg))
-			{
-				ROS_INFO("Stationary detection - zeroing and resetting...");
-				resetImu(&sensor, true, true, true); // TODO
-				statDet.Reset();
-			}
+            bool stationary = statDet.Test(imu_msg);
+            if(stationary)
+            {
+              calib.BufferStationarySample(imu_msg);
+            }
+
+            if(autoReset && stationary && (imu_msg.header.stamp - lastResetTime) > resetDur)
+            {
+              ROS_INFO("Stationary detection - zeroing and resetting...");
+              resetImu(&sensor, true, true, true); // TODO
+              
+              if(autoCalib) // TODO Put calibration in its own check since it needs # samples
+              {
+                calib.UpdateCalibration();
+              }
+              statDet.Reset();
+              lastResetTime = imu_msg.header.stamp;
+            }
           }
         }
       }
