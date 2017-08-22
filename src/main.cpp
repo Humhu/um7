@@ -218,45 +218,46 @@ void publishMsgs(um7::Registers& r, ros::NodeHandle* imu_nh, um7::Calibration& c
   static ros::Publisher rpy_pub = imu_nh->advertise<geometry_msgs::Vector3Stamped>("rpy", 1, false);
   static ros::Publisher temp_pub = imu_nh->advertise<std_msgs::Float32>("temperature", 1, false);
 
+  
+// body-fixed frame NED to ENU: (x y z)->(x -y -z) or (w x y z)->(x -y -z w)
+// world frame      NED to ENU: (x y z)->(y  x -z) or (w x y z)->(y  x -z w)
+  if (tf_ned_to_enu)
+  {
+    // world frame
+    imu_msg.orientation.w =  r.quat.get_scaled(2);
+    imu_msg.orientation.x =  r.quat.get_scaled(1);
+    imu_msg.orientation.y = -r.quat.get_scaled(3);
+    imu_msg.orientation.z =  r.quat.get_scaled(0);
+
+    // body-fixed frame
+    imu_msg.angular_velocity.x =  r.gyro.get_scaled(0);
+    imu_msg.angular_velocity.y = -r.gyro.get_scaled(1);
+    imu_msg.angular_velocity.z = -r.gyro.get_scaled(2);
+
+    // body-fixed frame
+    imu_msg.linear_acceleration.x =  r.accel.get_scaled(0);
+    imu_msg.linear_acceleration.y = -r.accel.get_scaled(1);
+    imu_msg.linear_acceleration.z = -r.accel.get_scaled(2);
+  }
+  else
+  {
+    imu_msg.orientation.w = r.quat.get_scaled(0);
+    imu_msg.orientation.x = r.quat.get_scaled(1);
+    imu_msg.orientation.y = r.quat.get_scaled(2);
+    imu_msg.orientation.z = r.quat.get_scaled(3);
+
+    imu_msg.angular_velocity.x = r.gyro.get_scaled(0);
+    imu_msg.angular_velocity.y = r.gyro.get_scaled(1);
+    imu_msg.angular_velocity.z = r.gyro.get_scaled(2);
+
+    imu_msg.linear_acceleration.x = r.accel.get_scaled(0);
+    imu_msg.linear_acceleration.y = r.accel.get_scaled(1);
+    imu_msg.linear_acceleration.z = r.accel.get_scaled(2);
+  }
+
   if (imu_pub.getNumSubscribers() > 0)
   {
-    // body-fixed frame NED to ENU: (x y z)->(x -y -z) or (w x y z)->(x -y -z w)
-    // world frame      NED to ENU: (x y z)->(y  x -z) or (w x y z)->(y  x -z w)
-    if (tf_ned_to_enu)
-    {
-      // world frame
-      imu_msg.orientation.w =  r.quat.get_scaled(2);
-      imu_msg.orientation.x =  r.quat.get_scaled(1);
-      imu_msg.orientation.y = -r.quat.get_scaled(3);
-      imu_msg.orientation.z =  r.quat.get_scaled(0);
-
-      // body-fixed frame
-      imu_msg.angular_velocity.x =  r.gyro.get_scaled(0);
-      imu_msg.angular_velocity.y = -r.gyro.get_scaled(1);
-      imu_msg.angular_velocity.z = -r.gyro.get_scaled(2);
-
-      // body-fixed frame
-      imu_msg.linear_acceleration.x =  r.accel.get_scaled(0);
-      imu_msg.linear_acceleration.y = -r.accel.get_scaled(1);
-      imu_msg.linear_acceleration.z = -r.accel.get_scaled(2);
-    }
-    else
-    {
-      imu_msg.orientation.w = r.quat.get_scaled(0);
-      imu_msg.orientation.x = r.quat.get_scaled(1);
-      imu_msg.orientation.y = r.quat.get_scaled(2);
-      imu_msg.orientation.z = r.quat.get_scaled(3);
-
-      imu_msg.angular_velocity.x = r.gyro.get_scaled(0);
-      imu_msg.angular_velocity.y = r.gyro.get_scaled(1);
-      imu_msg.angular_velocity.z = r.gyro.get_scaled(2);
-
-      imu_msg.linear_acceleration.x = r.accel.get_scaled(0);
-      imu_msg.linear_acceleration.y = r.accel.get_scaled(1);
-      imu_msg.linear_acceleration.z = r.accel.get_scaled(2);
-    }
-
-	calib.Correct(imu_msg);
+	  calib.Correct(imu_msg);
     imu_pub.publish(imu_msg);
   }
 
