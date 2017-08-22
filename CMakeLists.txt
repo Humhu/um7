@@ -26,7 +26,7 @@ include_directories(include
 )
 
 ## Declare a cpp executable
-add_executable(um7_driver src/main.cpp src/registers.cpp src/comms.cpp)
+add_executable(um7_driver src/main.cpp src/registers.cpp src/comms.cpp src/stationary.cpp)
 target_link_libraries(um7_driver ${catkin_LIBRARIES} )
 add_dependencies(um7_driver um7_generate_messages_cpp)
 

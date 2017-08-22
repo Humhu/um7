@@ -43,6 +43,7 @@
 #include "um7/comms.h"
 #include "um7/registers.h"
 #include "um7/Reset.h"
+#include "um7/stationary.h"
 
 const char VERSION[10] = "0.0.2";   // um7_driver version
 
@@ -190,13 +191,18 @@ void configureSensor(um7::Comms* sensor, ros::NodeHandle *private_nh)
 }
 
 
+void resetImu(um7::Comms* sensor, bool zero_gyros, bool reset_ekf, bool set_mag_ref)
+{
+  um7::Registers r;
+  if (zero_gyros) sendCommand(sensor, r.cmd_zero_gyros, "zero gyroscopes");
+  if (reset_ekf) sendCommand(sensor, r.cmd_reset_ekf, "reset EKF");
+  if (set_mag_ref) sendCommand(sensor, r.cmd_set_mag_ref, "set magnetometer");
+}
+
 bool handleResetService(um7::Comms* sensor,
     const um7::Reset::Request& req, const um7::Reset::Response& resp)
 {
-  um7::Registers r;
-  if (req.zero_gyros) sendCommand(sensor, r.cmd_zero_gyros, "zero gyroscopes");
-  if (req.reset_ekf) sendCommand(sensor, r.cmd_reset_ekf, "reset EKF");
-  if (req.set_mag_ref) sendCommand(sensor, r.cmd_set_mag_ref, "set magnetometer reference");
+  resetImu(sensor, req.zero_gyros, req.reset_ekf, req.set_mag_ref);
   return true;
 }
 
@@ -365,6 +371,17 @@ int main(int argc, char **argv)
   imu_msg.orientation_covariance[4] = orientation_y_covar;
   imu_msg.orientation_covariance[8] = orientation_z_covar;
 
+  // Set up stationarity detection
+  bool autoReset;
+  double xlTol, gyroTol;
+  int minSamples;
+  private_nh.param<bool>("enable_stationary_reset", autoReset, false);
+  private_nh.param<double>("stationary_xl_tol", xlTol, 0.1);
+  private_nh.param<double>("stationary_gyro_tol", gyroTol, 0.01);
+  private_nh.param<int>("stationary_min_samples", minSamples, 20);
+  
+  um7::StationaryDetector statDet(xlTol, gyroTol, (unsigned int) minSamples);
+
   // Real Time Loop
   bool first_failure = true;
   while (ros::ok())
@@ -398,6 +415,13 @@ int main(int argc, char **argv)
             imu_msg.header.stamp = ros::Time::now();
             publishMsgs(registers, &imu_nh, imu_msg, tf_ned_to_enu);
             ros::spinOnce();
+
+			if(autoReset && statDet.Test(imu_msg))
+			{
+				ROS_INFO("Stationary detection - zeroing and resetting...");
+				resetImu(&sensor, true, true, true); // TODO
+				statDet.Reset();
+			}
           }
         }
       }
