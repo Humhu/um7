@@ -13,6 +13,8 @@ public:
 
 	Calibration(double scale, unsigned int minNumSamples);
 
+	void SetLimits(double min, double max);
+
 	void Correct(sensor_msgs::Imu& msg);
 
 	// Stores data from stationary condition
@@ -28,6 +30,10 @@ public:
 private:
 
 	double _xlScale;
+
+	double _maxScale;
+	double _minScale;
+
 	unsigned int _minNumSamples;
 	std::vector<sensor_msgs::Imu> _stationarySamples;
 
