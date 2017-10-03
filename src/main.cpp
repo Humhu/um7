@@ -391,14 +391,16 @@ int main(int argc, char **argv)
 
   // Read intrinsics calibration
   double xlScale;
-  bool autoCalib;
+  bool autoCalib, startupCalib;
   private_nh.param<double>("xl_scale", xlScale, 1.0);
   private_nh.param<int>("calib_min_samples", minSamples, 20);
   private_nh.param<bool>("auto_calibrate_xl", autoCalib, true);
+  private_nh.param<bool>("startup_calibrate_xl", startupCalib, true);  
   um7::Calibration calib(xlScale, minSamples);
 
   // Real Time Loop
   bool first_failure = true;
+  bool startup_inited = false;
   while (ros::ok())
   {
     try
@@ -431,6 +433,15 @@ int main(int argc, char **argv)
             publishMsgs(registers, &imu_nh, calib, imu_msg, tf_ned_to_enu);
             ros::spinOnce();
 
+            // First time around, perform accelerometer calibration
+            if(!startup_inited && startupCalib)
+            {
+              calib.BufferStationarySample(imu_msg);
+              calib.UpdateCalibration();
+              startup_inited = true;
+              continue;
+            }
+
             bool stationary = statDet.Test(imu_msg);
             if(stationary)
             {
@@ -444,7 +455,7 @@ int main(int argc, char **argv)
               // it without guarantees the IMU will not start moving
               resetImu(&sensor, false, true, false); // TODO
               
-              if(autoCalib) // TODO Put calibration in its own check since it needs # samples
+              if(autoCalib && calib.HasEnoughSamples())
               {
                 calib.UpdateCalibration();
               }

@@ -29,16 +29,20 @@ void Calibration::BufferStationarySample(const sensor_msgs::Imu& msg)
 	_stationarySamples.push_back(msg);
 }
 
+bool Calibration::HasEnoughSamples() const
+{
+	return _stationarySamples.size() >= _minNumSamples;
+}
+
 void Calibration::UpdateCalibration()
 {
-	if(_stationarySamples.size() < _minNumSamples)
+	if( _stationarySamples.size() == 0)
 	{
-		ROS_WARN("Have %lu samples < min %d, skipping calibration update",
-		         _stationarySamples.size(), _minNumSamples);
+		ROS_WARN_STREAM( "Cannot calibrate with 0 samples" );
 		return;
 	}
 
-	double acc;
+	double acc = 0;
 	for(int i = 0; i < _stationarySamples.size(); ++i)
 	{
 		acc += compute_xl_mag(_stationarySamples[i]);

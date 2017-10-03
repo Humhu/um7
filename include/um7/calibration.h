@@ -18,6 +18,9 @@ public:
 	// Stores data from stationary condition
 	void BufferStationarySample(const sensor_msgs::Imu& msg);
 
+	// Returns whether there are enough buffered samples to perform calibration
+	bool HasEnoughSamples() const;
+
 	// Recomputes intrinsics using stationary data and clears buffer
 	void UpdateCalibration();
 
