@@ -22,7 +22,8 @@ public:
 	bool HasEnoughSamples() const;
 
 	// Recomputes intrinsics using stationary data and clears buffer
-	void UpdateCalibration();
+	// Returns success
+	bool UpdateCalibration();
 
 private:
 

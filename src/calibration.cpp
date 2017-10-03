@@ -34,12 +34,12 @@ bool Calibration::HasEnoughSamples() const
 	return _stationarySamples.size() >= _minNumSamples;
 }
 
-void Calibration::UpdateCalibration()
+bool Calibration::UpdateCalibration()
 {
 	if( _stationarySamples.size() == 0)
 	{
 		ROS_WARN_STREAM( "Cannot calibrate with 0 samples" );
-		return;
+		return false;
 	}
 
 	double acc = 0;
@@ -47,9 +47,18 @@ void Calibration::UpdateCalibration()
 	{
 		acc += compute_xl_mag(_stationarySamples[i]);
 	}
-	_xlScale *= GRAVITY * _stationarySamples.size() / acc;
+	double scale = _xlScale * GRAVITY * _stationarySamples.size() / acc;
+
+	if( !std::isfinite(scale) )
+	{ 
+		ROS_WARN_STREAM( "Computed non-finite scale!" );
+		return false; 
+	}
+
+	_xlScale = scale;
 	ROS_INFO("Updated xl scale to %f", _xlScale);
 	_stationarySamples.clear();
+	return true;
 }
 
 }
