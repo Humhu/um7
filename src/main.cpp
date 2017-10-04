@@ -437,7 +437,10 @@ int main(int argc, char **argv)
             if(!startup_inited && startupCalib)
             {
               calib.BufferStationarySample(imu_msg);
-              startup_inited = calib.UpdateCalibration();
+              if(calib.HasEnoughSamples())
+              {
+                startup_inited = calib.UpdateCalibration();
+              }
               continue;
             }
 
